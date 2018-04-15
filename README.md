@@ -5,7 +5,7 @@ cbor, and json natively, but if you need to store another type, you can look
 here for example implementations for custom serde-compatible types. KV's
 `Encoding` trait provides a simple API to read and write data.
 
-Example usage of Serde types with KV
+### Example usage of Serde types with KV
 
 ```rust
 // Write a value to LMDB with Bincode encoding type
@@ -57,7 +57,7 @@ fn main() {
 }
 ```
 
-Example implementing a custom YAML encoding
+### Example implementing a custom YAML encoding
 
 ```rust
 use kv::{Encoding, Error, Serde};
