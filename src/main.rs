@@ -11,7 +11,8 @@ extern crate toml;
 
 use std::{env, fmt::Debug};
 
-use kv::{Config, Manager, SerdeEncoding, ValueBuf};
+use kv::{Config, Manager, SerdeEncoding, ValueBuf, bincode::BincodeEncoding, cbor::CborEncoding,
+         json::JsonEncoding};
 
 mod messagepack_encoding;
 mod toml_encoding;
@@ -62,7 +63,10 @@ fn main() {
     env::set_var("RUST_LOG", "kv_test=info");
     env_logger::init();
 
-    let messagepack_bucket = "messagepack-encoding";
+    let bincode_bucket = "bincode-encoding";
+    let cbor_bucket = "cbor-encoding";
+    let json_bucket = "json-encoding";
+    let messagepack_bucket = "msgpack-encoding";
     let toml_bucket = "toml-encoding";
     let yaml_bucket = "yaml-encoding";
 
@@ -71,12 +75,18 @@ fn main() {
     };
 
     let mut cfg = Config::default("kv-test");
+    cfg.bucket(bincode_bucket, None);
+    cfg.bucket(cbor_bucket, None);
+    cfg.bucket(json_bucket, None);
     cfg.bucket(messagepack_bucket, None);
     cfg.bucket(toml_bucket, None);
     cfg.bucket(yaml_bucket, None);
 
     let mut mgr = Manager::new();
 
+    test::<BincodeEncoding<_>, _>(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone());
+    test::<CborEncoding<_>, _>(&mut mgr, cfg.clone(), cbor_bucket, tmp.clone());
+    test::<JsonEncoding<_>, _>(&mut mgr, cfg.clone(), json_bucket, tmp.clone());
     test::<MessagepackEncoding<_>, _>(&mut mgr, cfg.clone(), messagepack_bucket, tmp.clone());
     test::<TomlEncoding<_>, _>(&mut mgr, cfg.clone(), toml_bucket, tmp.clone());
     test::<YamlEncoding<_>, _>(&mut mgr, cfg.clone(), yaml_bucket, tmp.clone());
