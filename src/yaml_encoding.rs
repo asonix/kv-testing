@@ -1,12 +1,12 @@
-use kv::{Encoding, Error, SerdeEncoding};
+use kv::{Encoding, Error, Serde};
 use std::io::{Read, Write};
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_yaml::{from_reader, to_writer};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct YamlEncoding<T>(T);
+pub struct Yaml<T>(T);
 
-impl<T> Encoding for YamlEncoding<T>
+impl<T> Encoding for Yaml<T>
 where
     T: DeserializeOwned + Serialize,
 {
@@ -18,19 +18,19 @@ where
     }
 
     fn decode_from<R: Read>(r: &mut R) -> Result<Self, Error> {
-        from_reader(r).map(YamlEncoding).map_err(|e| {
+        from_reader(r).map(Yaml).map_err(|e| {
             error!("Error decoding: {}", e);
             Error::InvalidEncoding
         })
     }
 }
 
-impl<T> SerdeEncoding<T> for YamlEncoding<T>
+impl<T> Serde<T> for Yaml<T>
 where
     T: DeserializeOwned + Serialize,
 {
     fn from_serde(value: T) -> Self {
-        YamlEncoding(value)
+        Yaml(value)
     }
 
     fn to_serde(self) -> T {

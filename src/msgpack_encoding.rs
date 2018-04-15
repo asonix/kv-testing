@@ -1,12 +1,12 @@
-use kv::{Encoding, Error, SerdeEncoding};
+use kv::{Encoding, Error, Serde};
 use rmp_serde::{decode::from_read, encode::write};
 use std::io::{Read, Write};
 use serde::{de::DeserializeOwned, ser::Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct MessagepackEncoding<T>(T);
+pub struct Msgpack<T>(T);
 
-impl<T> Encoding for MessagepackEncoding<T>
+impl<T> Encoding for Msgpack<T>
 where
     T: DeserializeOwned + Serialize,
 {
@@ -18,19 +18,19 @@ where
     }
 
     fn decode_from<R: Read>(r: &mut R) -> Result<Self, Error> {
-        from_read(r).map(MessagepackEncoding).map_err(|e| {
+        from_read(r).map(Msgpack).map_err(|e| {
             error!("Error decoding: {}", e);
             Error::InvalidEncoding
         })
     }
 }
 
-impl<T> SerdeEncoding<T> for MessagepackEncoding<T>
+impl<T> Serde<T> for Msgpack<T>
 where
     T: DeserializeOwned + Serialize,
 {
     fn from_serde(t: T) -> Self {
-        MessagepackEncoding(t)
+        Msgpack(t)
     }
 
     fn to_serde(self) -> T {

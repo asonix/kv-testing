@@ -8,37 +8,39 @@ here for example implementations for custom serde-compatible types. KV's
 Example usage of Serde types with KV
 
 ```rust
-// Write a bincode value into LMDB
-fn write_bincode<T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T) {
-    let handle = mgr.open(cfg).unwrap();
+// Write a value to LMDB with Bincode encoding type
+fn write_bincode<T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T) -> Result<(), Error>
+where
+    C: Serde<T> + Debug,
+{
+    let handle = mgr.open(cfg)?;
 
-    let store = handle.write().unwrap();
-    let bucket = store
-        .bucket::<&str, ValueBuf<BincodeEncoding<T>>>(Some(bucket_name))
-        .unwrap();
-    let mut txn = store.write_txn().unwrap();
+    let store = handle.write()?;
+    let bucket = store.bucket::<&str, ValueBuf<Bincode<T>>>(Some(bucket_name))?;
+    let mut txn = store.write_txn()?;
 
-    txn.set(&bucket, "key", BincodeEncoding::from_serde(item)).unwrap();
-    txn.commit().unwrap();
+    txn.set(&bucket, "key", Bincode::from_serde(item).encode()?)?;
+    txn.commit()?;
     info!("Stored in {}", bucket_name);
+    Ok(())
 }
 
-// Read a value from LMDB of type C
-fn read<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str)
+// Read a value from LMDB with encoding type C
+fn read<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str) -> Result<(), Error>
 where
-    C: SerdeEncoding<T> + Debug,
+    C: Serde<T> + Debug,
 {
-    let handle = mgr.open(cfg).unwrap();
-    let store = handle.read().unwrap();
-    let bucket = store
-        .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
-        .unwrap();
+    let handle = mgr.open(cfg)?;
 
-    let txn = store.read_txn().unwrap();
+    let store = handle.read()?;
+    let bucket = store.bucket::<&str, ValueBuf<C>>(Some(bucket_name))?;
 
-    let item = txn.get(&bucket, "key").unwrap();
+    let txn = store.read_txn()?;
 
-    info!("Item from {}: {:?}", bucket_name, item.inner().unwrap());
+    let item = txn.get(&bucket, "key")?;
+
+    info!("Item from {}: {:?}", bucket_name, item.inner()?);
+    Ok(())
 }
 
 fn main() {
@@ -50,8 +52,8 @@ fn main() {
 
     let mut mgr = Manager::new();
 
-    write_bincode(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone());
-    read::<BincodeEncoding<_>, SomeSerdeType>(&mut mgr, cfg.clone(), bincode_bucket);
+    write_bincode(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone()).unwrap();
+    read::<BincodeEncoding<_>, SomeSerdeType>(&mut mgr, cfg.clone(), bincode_bucket).unwrap();
 }
 ```
 

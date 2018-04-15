@@ -1,12 +1,12 @@
-use kv::{Encoding, Error, SerdeEncoding};
+use kv::{Encoding, Error, Serde};
 use std::io::{Read, Write};
 use serde::{de::DeserializeOwned, ser::Serialize};
 use toml::{from_slice, to_vec};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct TomlEncoding<T>(T);
+pub struct Toml<T>(T);
 
-impl<T> Encoding for TomlEncoding<T>
+impl<T> Encoding for Toml<T>
 where
     T: DeserializeOwned + Serialize,
 {
@@ -30,19 +30,19 @@ where
             Error::IO(e)
         })?;
 
-        from_slice(&v).map(TomlEncoding).map_err(|e| {
+        from_slice(&v).map(Toml).map_err(|e| {
             error!("Error decoding: {}", e);
             Error::InvalidEncoding
         })
     }
 }
 
-impl<T> SerdeEncoding<T> for TomlEncoding<T>
+impl<T> Serde<T> for Toml<T>
 where
     T: DeserializeOwned + Serialize,
 {
     fn from_serde(t: T) -> Self {
-        TomlEncoding(t)
+        Toml(t)
     }
 
     fn to_serde(self) -> T {

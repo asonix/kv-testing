@@ -11,16 +11,15 @@ extern crate toml;
 
 use std::{env, fmt::Debug};
 
-use kv::{Config, Manager, SerdeEncoding, ValueBuf, bincode::BincodeEncoding, cbor::CborEncoding,
-         json::JsonEncoding};
+use kv::{Config, Error, Manager, Serde, ValueBuf, bincode::Bincode, cbor::Cbor, json::Json};
 
-mod messagepack_encoding;
+mod msgpack_encoding;
 mod toml_encoding;
 mod yaml_encoding;
 
-pub use messagepack_encoding::MessagepackEncoding;
-pub use toml_encoding::TomlEncoding;
-pub use yaml_encoding::YamlEncoding;
+pub use msgpack_encoding::Msgpack;
+pub use toml_encoding::Toml;
+pub use yaml_encoding::Yaml;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Tmp {
@@ -28,48 +27,47 @@ pub struct Tmp {
 }
 
 // Write a value to LMDB with encoding type C
-fn write<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T)
+fn write<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T) -> Result<(), Error>
 where
-    C: SerdeEncoding<T> + Debug,
+    C: Serde<T> + Debug,
 {
-    let handle = mgr.open(cfg).unwrap();
+    let handle = mgr.open(cfg)?;
 
-    let store = handle.write().unwrap();
-    let bucket = store
-        .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
-        .unwrap();
-    let mut txn = store.write_txn().unwrap();
+    let store = handle.write()?;
+    let bucket = store.bucket::<&str, ValueBuf<C>>(Some(bucket_name))?;
+    let mut txn = store.write_txn()?;
 
-    txn.set(&bucket, "key", C::from_serde(item)).unwrap();
-    txn.commit().unwrap();
+    txn.set(&bucket, "key", C::from_serde(item).encode()?)?;
+    txn.commit()?;
     info!("Stored in {}", bucket_name);
+    Ok(())
 }
 
 // Read a value from LMDB with encoding type C
-fn read<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str)
+fn read<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str) -> Result<(), Error>
 where
-    C: SerdeEncoding<T> + Debug,
+    C: Serde<T> + Debug,
 {
-    let handle = mgr.open(cfg).unwrap();
+    let handle = mgr.open(cfg)?;
 
-    let store = handle.read().unwrap();
-    let bucket = store
-        .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
-        .unwrap();
+    let store = handle.read()?;
+    let bucket = store.bucket::<&str, ValueBuf<C>>(Some(bucket_name))?;
 
-    let txn = store.read_txn().unwrap();
+    let txn = store.read_txn()?;
 
-    let item = txn.get(&bucket, "key").unwrap();
+    let item = txn.get(&bucket, "key")?;
 
-    info!("Item from {}: {:?}", bucket_name, item.inner().unwrap());
+    info!("Item from {}: {:?}", bucket_name, item.inner()?);
+    Ok(())
 }
 
-fn test<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T)
+fn test<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T) -> Result<(), Error>
 where
-    C: SerdeEncoding<T> + Debug,
+    C: Serde<T> + Debug,
 {
-    write::<C, _>(mgr, cfg.clone(), bucket_name, item);
-    read::<C, _>(mgr, cfg, bucket_name);
+    write::<C, _>(mgr, cfg.clone(), bucket_name, item)?;
+    read::<C, _>(mgr, cfg, bucket_name)?;
+    Ok(())
 }
 
 fn main() {
@@ -97,10 +95,10 @@ fn main() {
 
     let mut mgr = Manager::new();
 
-    test::<BincodeEncoding<_>, _>(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone());
-    test::<CborEncoding<_>, _>(&mut mgr, cfg.clone(), cbor_bucket, tmp.clone());
-    test::<JsonEncoding<_>, _>(&mut mgr, cfg.clone(), json_bucket, tmp.clone());
-    test::<MessagepackEncoding<_>, _>(&mut mgr, cfg.clone(), msgpack_bucket, tmp.clone());
-    test::<TomlEncoding<_>, _>(&mut mgr, cfg.clone(), toml_bucket, tmp.clone());
-    test::<YamlEncoding<_>, _>(&mut mgr, cfg.clone(), yaml_bucket, tmp.clone());
+    test::<Bincode<_>, _>(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone()).unwrap();
+    test::<Cbor<_>, _>(&mut mgr, cfg.clone(), cbor_bucket, tmp.clone()).unwrap();
+    test::<Json<_>, _>(&mut mgr, cfg.clone(), json_bucket, tmp.clone()).unwrap();
+    test::<Msgpack<_>, _>(&mut mgr, cfg.clone(), msgpack_bucket, tmp.clone()).unwrap();
+    test::<Toml<_>, _>(&mut mgr, cfg.clone(), toml_bucket, tmp.clone()).unwrap();
+    test::<Yaml<_>, _>(&mut mgr, cfg.clone(), yaml_bucket, tmp.clone()).unwrap();
 }
