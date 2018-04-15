@@ -5,6 +5,56 @@ cbor, and json natively, but if you need to store another type, you can look
 here for example implementations for custom serde-compatible types. KV's
 `Encoding` trait provides a simple API to read and write data.
 
+Example usage of Serde types with KV
+
+```rust
+// Write a bincode value into LMDB
+fn write_bincode<T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T) {
+    let handle = mgr.open(cfg).unwrap();
+
+    let store = handle.write().unwrap();
+    let bucket = store
+        .bucket::<&str, ValueBuf<BincodeEncoding<T>>>(Some(bucket_name))
+        .unwrap();
+    let mut txn = store.write_txn().unwrap();
+
+    txn.set(&bucket, "key", BincodeEncoding::from_serde(item)).unwrap();
+    txn.commit().unwrap();
+    info!("Stored in {}", bucket_name);
+}
+
+// Read a value from LMDB of type C
+fn read<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str)
+where
+    C: SerdeEncoding<T> + Debug,
+{
+    let handle = mgr.open(cfg).unwrap();
+    let store = handle.read().unwrap();
+    let bucket = store
+        .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
+        .unwrap();
+
+    let txn = store.read_txn().unwrap();
+
+    let item = txn.get(&bucket, "key").unwrap();
+
+    info!("Item from {}: {:?}", bucket_name, item.inner().unwrap());
+}
+
+fn main() {
+    let tmp = SomeSerdeType::new();
+    let bincode_bucket = "bincode-encoding";
+
+    let mut cfg = Config::default("kv-test");
+    cfg.bucket(bincode_bucket, None);
+
+    let mut mgr = Manager::new();
+
+    write_bincode(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone());
+    read::<BincodeEncoding<_>, SomeSerdeType>(&mut mgr, cfg.clone(), bincode_bucket);
+}
+```
+
 Example implementing a custom YAML encoding
 
 ```rust

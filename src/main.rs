@@ -27,36 +27,49 @@ pub struct Tmp {
     tmp: String,
 }
 
-fn test<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T)
+// Write a value to LMDB with encoding type C
+fn write<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T)
 where
     C: SerdeEncoding<T> + Debug,
 {
     let handle = mgr.open(cfg).unwrap();
 
-    {
-        let store = handle.write().unwrap();
-        let bucket = store
-            .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
-            .unwrap();
-        let mut txn = store.write_txn().unwrap();
+    let store = handle.write().unwrap();
+    let bucket = store
+        .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
+        .unwrap();
+    let mut txn = store.write_txn().unwrap();
 
-        txn.set(&bucket, "key", C::from_serde(item)).unwrap();
-        txn.commit().unwrap();
-        info!("Stored in {}", bucket_name);
-    }
+    txn.set(&bucket, "key", C::from_serde(item)).unwrap();
+    txn.commit().unwrap();
+    info!("Stored in {}", bucket_name);
+}
 
-    {
-        let store = handle.read().unwrap();
-        let bucket = store
-            .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
-            .unwrap();
+// Read a value from LMDB with encoding type C
+fn read<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str)
+where
+    C: SerdeEncoding<T> + Debug,
+{
+    let handle = mgr.open(cfg).unwrap();
 
-        let txn = store.read_txn().unwrap();
+    let store = handle.read().unwrap();
+    let bucket = store
+        .bucket::<&str, ValueBuf<C>>(Some(bucket_name))
+        .unwrap();
 
-        let item = txn.get(&bucket, "key").unwrap();
+    let txn = store.read_txn().unwrap();
 
-        info!("Item from {}: {:?}", bucket_name, item.inner());
-    }
+    let item = txn.get(&bucket, "key").unwrap();
+
+    info!("Item from {}: {:?}", bucket_name, item.inner().unwrap());
+}
+
+fn test<C, T>(mgr: &mut Manager, cfg: Config, bucket_name: &str, item: T)
+where
+    C: SerdeEncoding<T> + Debug,
+{
+    write::<C, _>(mgr, cfg.clone(), bucket_name, item);
+    read::<C, _>(mgr, cfg, bucket_name);
 }
 
 fn main() {
@@ -66,7 +79,7 @@ fn main() {
     let bincode_bucket = "bincode-encoding";
     let cbor_bucket = "cbor-encoding";
     let json_bucket = "json-encoding";
-    let messagepack_bucket = "msgpack-encoding";
+    let msgpack_bucket = "msgpack-encoding";
     let toml_bucket = "toml-encoding";
     let yaml_bucket = "yaml-encoding";
 
@@ -78,7 +91,7 @@ fn main() {
     cfg.bucket(bincode_bucket, None);
     cfg.bucket(cbor_bucket, None);
     cfg.bucket(json_bucket, None);
-    cfg.bucket(messagepack_bucket, None);
+    cfg.bucket(msgpack_bucket, None);
     cfg.bucket(toml_bucket, None);
     cfg.bucket(yaml_bucket, None);
 
@@ -87,7 +100,7 @@ fn main() {
     test::<BincodeEncoding<_>, _>(&mut mgr, cfg.clone(), bincode_bucket, tmp.clone());
     test::<CborEncoding<_>, _>(&mut mgr, cfg.clone(), cbor_bucket, tmp.clone());
     test::<JsonEncoding<_>, _>(&mut mgr, cfg.clone(), json_bucket, tmp.clone());
-    test::<MessagepackEncoding<_>, _>(&mut mgr, cfg.clone(), messagepack_bucket, tmp.clone());
+    test::<MessagepackEncoding<_>, _>(&mut mgr, cfg.clone(), msgpack_bucket, tmp.clone());
     test::<TomlEncoding<_>, _>(&mut mgr, cfg.clone(), toml_bucket, tmp.clone());
     test::<YamlEncoding<_>, _>(&mut mgr, cfg.clone(), yaml_bucket, tmp.clone());
 }
