@@ -37,7 +37,7 @@ where
     let bucket = store.bucket::<&str, ValueBuf<C>>(Some(bucket_name))?;
     let mut txn = store.write_txn()?;
 
-    txn.set(&bucket, "key", C::from_serde(item).encode()?)?;
+    txn.set(&bucket, "key", C::to_value_buf(item)?)?;
     txn.commit()?;
     info!("Stored in {}", bucket_name);
     Ok(())

@@ -118,7 +118,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "kv"
 version = "0.6.0"
-source = "git+https://github.com/zshipko/rust-kv.git#7c6796f9a959e46498ff7378f0f3396745113c33"
+source = "git+https://github.com/zshipko/rust-kv.git#21b5227fd4bc4043d4281926ca45e171df2f2a08"
 dependencies = [
  "bincode 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",

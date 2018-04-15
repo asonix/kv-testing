@@ -19,7 +19,7 @@ where
     let bucket = store.bucket::<&str, ValueBuf<Bincode<T>>>(Some(bucket_name))?;
     let mut txn = store.write_txn()?;
 
-    txn.set(&bucket, "key", Bincode::from_serde(item).encode()?)?;
+    txn.set(&bucket, "key", Bincode::to_value_buf(item)?)?;
     txn.commit()?;
     info!("Stored in {}", bucket_name);
     Ok(())
