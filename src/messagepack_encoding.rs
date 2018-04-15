@@ -1,9 +1,7 @@
-use kv::{Encoding, Error};
+use kv::{Encoding, Error, SerdeEncoding};
 use rmp_serde::{decode::from_read, encode::write};
 use std::io::{Read, Write};
 use serde::{de::DeserializeOwned, ser::Serialize};
-
-use super::CustomEncoding;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MessagepackEncoding<T>(T);
@@ -27,11 +25,15 @@ where
     }
 }
 
-impl<T> CustomEncoding<T> for MessagepackEncoding<T>
+impl<T> SerdeEncoding<T> for MessagepackEncoding<T>
 where
     T: DeserializeOwned + Serialize,
 {
-    fn from_value(value: T) -> Self {
-        MessagepackEncoding(value)
+    fn from_serde(t: T) -> Self {
+        MessagepackEncoding(t)
+    }
+
+    fn to_serde(self) -> T {
+        self.0
     }
 }

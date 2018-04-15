@@ -1,9 +1,7 @@
-use kv::{Encoding, Error};
+use kv::{Encoding, Error, SerdeEncoding};
 use std::io::{Read, Write};
 use serde::{de::DeserializeOwned, ser::Serialize};
 use toml::{from_slice, to_vec};
-
-use super::CustomEncoding;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlEncoding<T>(T);
@@ -39,11 +37,15 @@ where
     }
 }
 
-impl<T> CustomEncoding<T> for TomlEncoding<T>
+impl<T> SerdeEncoding<T> for TomlEncoding<T>
 where
     T: DeserializeOwned + Serialize,
 {
-    fn from_value(value: T) -> Self {
-        TomlEncoding(value)
+    fn from_serde(t: T) -> Self {
+        TomlEncoding(t)
+    }
+
+    fn to_serde(self) -> T {
+        self.0
     }
 }
