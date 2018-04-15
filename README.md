@@ -1,9 +1,9 @@
 # KV-testing
 
-KV provides mechanisms for using bincode, cbor, and json natively, but if
-you need to store another type, you can look here for example implementations
-for custom serde-compatible types. KV's `Encoding` trait provides a simple API
-to read and write data.
+[KV](https://github.com/zshipko/rust-kv) provides mechanisms for using bincode,
+cbor, and json natively, but if you need to store another type, you can look
+here for example implementations for custom serde-compatible types. KV's
+`Encoding` trait provides a simple API to read and write data.
 
 Example implementing a custom YAML encoding
 
