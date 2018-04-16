@@ -14,5 +14,4 @@ toml = "0.4"
 
 [dependencies.kv]
 version = "0.6"
-git = "https://github.com/zshipko/rust-kv.git"
 features = [ "bincode-value", "cbor-value", "json-value" ]
